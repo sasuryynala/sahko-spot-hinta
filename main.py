@@ -46,7 +46,7 @@ def send_to_discord(data):
                         'width': 100
                     },
                     'footer': {
-                        'text': datetime_formatted
+                        'text': '🕘 ' + datetime_formatted
                     }
                 }
             ]
@@ -62,7 +62,7 @@ def wait_for_next_hour():
     seconds_remaining = 3600 - (current_time.tm_min * 60 + current_time.tm_sec)
     # Wait until the next full hour
     time.sleep(seconds_remaining)
-    
+
 # Run the script indefinitely
 while True:
     # Wait until the next full hour
