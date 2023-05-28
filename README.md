@@ -6,6 +6,7 @@ This Python script retrieves electricity price information from the Spot-Hinta.f
 
 - Python 3.x
 - `requests` library (install using `pip install requests`)
+- `pytz` library (install using `pip install pytz`)
 
 ## Configuration
 
@@ -20,7 +21,7 @@ Before running the script, make sure to set up the necessary configuration:
 1. Clone the repository or download the script file.
 
 2. Install the required dependencies by running the following command:
-pip install requests
+pip install requests pytz
 
 
 3. Set the `DISCORD_WEBHOOK_URL` environment variable to the Discord webhook URL.
