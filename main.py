@@ -6,17 +6,19 @@ import pytz
 
 def make_http_call():
     url = 'https://api.spot-hinta.fi/Today'
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        # Process the response data to get the current and next hour's prices
+    try:
+        # Make an HTTP GET request to retrieve electricity price data
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an exception if the request was not successful (status code other than 200)
+        data = response.json()  # Parse the response JSON
         current_hour_prices, next_hour_prices = get_current_and_next_hour_prices(data)
         if current_hour_prices and next_hour_prices:
+            # Send the prices to Discord
             send_to_discord(current_hour_prices, next_hour_prices)
         else:
             print("Current or next hour's prices not available yet.")
-    else:
-        print('HTTP request failed with status code {}'.format(response.status_code))
+    except requests.exceptions.RequestException as e:
+        print('HTTP request failed:', e)
 
 def get_current_and_next_hour_prices(data):
     # Specify the city's timezone
@@ -31,7 +33,7 @@ def get_current_and_next_hour_prices(data):
     current_hour_prices = None
     next_hour_prices = None
 
-    # Find the current and next hour's prices
+    # Find the current and next hour's prices from the data
     for item in data:
         datetime_str = item['DateTime']
         datetime_obj = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%S%z")
@@ -55,25 +57,22 @@ def send_to_discord(current_hour_prices, next_hour_prices):
     next_timestamp = next_hour_prices.get('DateTime')
 
     if current_price_with_tax is not None and next_price_with_tax is not None:
-        # Discord webhook URL
         url = os.environ.get('DISCORD_WEBHOOK_URL')
         headers = {'Content-Type': 'application/json'}
 
-        # Multiply prices by 100 to convert to cents
+        # Convert prices to cents
         current_price_with_tax_cents = current_price_with_tax * 100
         current_price_no_tax_cents = current_price_no_tax * 100
 
         next_price_with_tax_cents = next_price_with_tax * 100
         next_price_no_tax_cents = next_price_no_tax * 100
 
-        # Format the date and time using datetime
         current_datetime_obj = datetime.strptime(current_timestamp, "%Y-%m-%dT%H:%M:%S%z")
         current_datetime_formatted = current_datetime_obj.strftime("%Y-%m-%d %H:%M")
 
         next_datetime_obj = datetime.strptime(next_timestamp, "%Y-%m-%dT%H:%M:%S%z")
         next_datetime_formatted = next_datetime_obj.strftime("%Y-%m-%d %H:%M")
 
-        # Role mention
         role_mention = '<@&1111346943273205770>'
 
         payload = {
@@ -94,21 +93,18 @@ def send_to_discord(current_hour_prices, next_hour_prices):
                 }
             ]
         }
-        response = requests.post(url, headers=headers, json=payload)
-        if response.status_code != 204:
-            print('Failed to send data to Discord with status code {}'.format(response.status_code))
+        try:
+            # Make an HTTP POST request to send the data to Discord
+            response = requests.post(url, headers=headers, json=payload)
+            response.raise_for_status()  # Raise an exception if the request was not successful (status code other than 204)
+        except requests.exceptions.RequestException as e:
+            print('Failed to send data to Discord:', e)
 
 def wait_for_next_hour():
-    # Get the current time
     current_time = time.localtime()
-    # Calculate the number of seconds remaining until the next full hour
     seconds_remaining = 3600 - (current_time.tm_min * 60 + current_time.tm_sec)
-    # Wait until the next full hour
     time.sleep(seconds_remaining)
 
-# Run the script indefinitely
 while True:
-    # Wait until the next full hour
     wait_for_next_hour()
-    # Make the HTTP call
     make_http_call()
